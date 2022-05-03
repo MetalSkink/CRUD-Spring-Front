@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { Producto } from 'src/app/models/producto';
 import { ProductoService } from '../../../services/producto.service';
@@ -12,12 +13,22 @@ import { ProductoService } from '../../../services/producto.service';
 export class FormularioProductoComponent implements OnInit {
 
   producto!: Producto;
+  id = Number(this.activatedRoute.snapshot.paramMap.get('id'));
 
   constructor(private productoService: ProductoService,
+              private activatedRoute: ActivatedRoute,
               private toastr: ToastrService,
               private fb: FormBuilder) { }
 
   ngOnInit(): void {
+    if (this.id) {
+      this.productoService.detail(this.id).subscribe({
+        next: (resp) => {
+          this.producto = resp;
+          this.miFormulario.patchValue(this.producto);
+        }
+      })
+    }
   }
 
   miFormulario = this.fb.group({
@@ -41,18 +52,29 @@ export class FormularioProductoComponent implements OnInit {
       return;
     }
     this.producto = this.miFormulario.value;
+    if (this.id) {
+      this.editar();
+    }else{
+      this.agregar();
+    }
+  }
 
-    // this.productoService.save(this.producto).subscribe(data => {
-    //   this.toastr.success(data.mensaje, 'Exito!');
-    //   this.miFormulario.reset();
-    // }, error: () => {
-    //   this.toastr.error(error.mensaje, 'Error!');
-    // });
-
+  agregar(){
     this.productoService.save(this.producto).subscribe({
       next: (resp) => {
         this.toastr.success(resp.mensaje, 'Exito!');
         this.miFormulario.reset();
+      },
+      error: (err) => {
+        this.toastr.error(err.error.mensaje, 'Error!');
+      }
+    });
+  }
+
+  editar(){
+    this.productoService.update(this.id, this.producto).subscribe({
+      next: (resp) => {
+        this.toastr.success(resp.mensaje, 'Exito!');
       },
       error: (err) => {
         this.toastr.error(err.error.mensaje, 'Error!');
